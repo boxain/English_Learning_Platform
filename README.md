@@ -2,13 +2,18 @@
 
 單人使用的英語聽力與跟讀練習平台（不需登入）。播放使用 YouTube 內嵌播放器，後端只抓英文字幕，不下載影片。
 
-目前完成的是**後端第一階段**：貼上 YouTube 網址、取得英文字幕、切成跟讀片段，並存進 SQLite。前端頁面與中文翻譯會在後續階段加上。
+目前包含後端 API 與前端練習頁。中文翻譯（依 `OPENAI_API_KEY` 快取）會在下一個階段接上；還沒有翻譯時，練習頁的「英文＋中文」會顯示說明，英文練習不受影響。
 
 ## 需求
 
 - Python 3.11 或以上
+- Node.js 20 或以上
 
 ## 本地執行
+
+開兩個終端機。
+
+後端：
 
 ```bash
 cd backend
@@ -18,7 +23,15 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-API 文件：<http://127.0.0.1:8000/docs>
+前端：
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+打開 <http://127.0.0.1:5173>。開發伺服器會把 `/api` 轉到後端。API 文件在 <http://127.0.0.1:8000/docs>。
 
 資料庫預設是 `backend/data/app.db`。想換位置可以設定：
 
@@ -81,12 +94,23 @@ export YOUTUBE_PROXY_URL=http://user:pass@host:port
 
 沒有代理時，其他功能與測試仍可運作；匯入會回傳清楚的錯誤，不會讓服務當掉。
 
+## 頁面
+
+- `/`：貼上 YouTube 網址、看已匯入的影片
+- `/videos/{id}`：該片的跟讀片段
+- `/videos/{id}/segments/{position}`：只播放該段。可重播、上一段／下一段，速度為 0.8、0.9、1.0。進入時不顯示字幕，側欄可改成英文，或英文＋中文。英文旁可複製。
+
 ## 測試
 
 ```bash
 cd backend
 source .venv/bin/activate
 pytest
+```
+
+```bash
+cd frontend
+npm test
 ```
 
 字幕抓取在單元測試裡使用假的 YouTube 回應，所以不需要網路，也不需要 `OPENAI_API_KEY`。

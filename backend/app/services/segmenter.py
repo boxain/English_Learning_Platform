@@ -120,7 +120,10 @@ def _clean_text(text: str) -> str:
     cleaned = _TAGS.sub(" ", cleaned)
     cleaned = _SOUND_BRACKETS.sub(" ", cleaned)
     cleaned = _SOUND_PARENS.sub(" ", cleaned)
-    return _WHITESPACE.sub(" ", cleaned).strip()
+    cleaned = _WHITESPACE.sub(" ", cleaned).strip()
+    if not re.search(r"[A-Za-z0-9]", cleaned):
+        return ""
+    return cleaned
 
 
 def _cues_to_words(cues: list[Cue]) -> list[TimedWord]:
