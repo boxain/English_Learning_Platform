@@ -5,12 +5,13 @@ from __future__ import annotations
 from collections.abc import Generator
 from pathlib import Path
 
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.config import Settings
+from app.models import Base
 
 
 def sqlite_file_path(database_url: str) -> Path | None:
@@ -59,3 +60,15 @@ def session_scope(session_factory: sessionmaker[Session]) -> Generator[Session, 
         yield session
     finally:
         session.close()
+
+
+def ensure_schema(engine: Engine) -> None:
+    """Create tables and add columns introduced after the first release."""
+    Base.metadata.create_all(engine)
+    if engine.dialect.name != "sqlite":
+        return
+    with engine.begin() as connection:
+        rows = connection.execute(text("PRAGMA table_info(segments)")).fetchall()
+        columns = {row[1] for row in rows}
+        if rows and "translation_zh" not in columns:
+            connection.execute(text("ALTER TABLE segments ADD COLUMN translation_zh TEXT"))

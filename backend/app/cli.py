@@ -11,11 +11,11 @@ import logging
 import sys
 
 from app.config import get_settings
-from app.db import make_engine, make_session_factory
+from app.db import ensure_schema, make_engine, make_session_factory
 from app.errors import AppError
-from app.models import Base
 from app.services.importer import import_video
 from app.services.titles import OEmbedTitleLookup
+from app.services.translate import build_translator
 from app.services.youtube import YoutubeTranscriptFetcher
 
 
@@ -30,7 +30,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     settings = get_settings()
     engine = make_engine(settings)
-    Base.metadata.create_all(engine)
+    ensure_schema(engine)
     session = make_session_factory(engine)()
     try:
         video, created = import_video(
@@ -38,14 +38,16 @@ def main(argv: list[str] | None = None) -> int:
             args.url,
             fetcher=YoutubeTranscriptFetcher(proxy_url=settings.youtube_proxy_url),
             title_lookup=OEmbedTitleLookup(),
+            translator=build_translator(settings),
         )
-        lines = [
-            (
+        lines = []
+        for segment in video.segments[:8]:
+            lines.append(
                 f"  #{segment.position:03d} "
                 f"{segment.start_time:7.2f}-{segment.end_time:7.2f}s  {segment.text}"
             )
-            for segment in video.segments[:8]
-        ]
+            if segment.translation_zh:
+                lines.append(f"         {segment.translation_zh}")
         remaining = len(video.segments) - 8
         summary = (
             f"{'imported' if created else 'already stored'}: "

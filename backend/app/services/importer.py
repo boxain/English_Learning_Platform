@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.errors import AppError
 from app.models import Segment, Video
 from app.services.segmenter import segment_transcript
+from app.services.translate import OpenAITranslator, fill_missing_translations
 from app.services.youtube import MSG_EMPTY, EnglishTranscript, YoutubeTranscriptFetcher, canonical_watch_url, require_video_id
 
 
@@ -19,12 +20,14 @@ def import_video(
     *,
     fetcher: YoutubeTranscriptFetcher,
     title_lookup: Callable[[str], str | None],
+    translator: OpenAITranslator | None = None,
 ) -> tuple[Video, bool]:
     video_id = require_video_id(url)
     existing = db.scalar(
         select(Video).where(Video.youtube_id == video_id).options(selectinload(Video.segments))
     )
     if existing is not None:
+        store_translations(db, existing, translator)
         return existing, False
 
     transcript: EnglishTranscript = fetcher.fetch_english(video_id)
@@ -55,4 +58,16 @@ def import_video(
         db.rollback()
         raise
     db.refresh(video)
+    store_translations(db, video, translator)
     return video, True
+
+
+def store_translations(db: Session, video: Video, translator: OpenAITranslator | None) -> None:
+    if not fill_missing_translations(video, translator):
+        return
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    db.refresh(video)

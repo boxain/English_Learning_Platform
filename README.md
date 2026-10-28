@@ -2,7 +2,7 @@
 
 單人使用的英語聽力與跟讀練習平台（不需登入）。播放使用 YouTube 內嵌播放器，後端只抓英文字幕，不下載影片。
 
-目前包含後端 API 與前端練習頁。中文翻譯（依 `OPENAI_API_KEY` 快取）會在下一個階段接上；還沒有翻譯時，練習頁的「英文＋中文」會顯示說明，英文練習不受影響。
+目前包含後端 API、練習頁，以及繁體中文翻譯。有設定 `OPENAI_API_KEY` 時，每個片段會翻譯一次並存進資料庫；沒有金鑰時，英文練習照常可用，「英文＋中文」會顯示說明。
 
 ## 需求
 
@@ -22,6 +22,15 @@ source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+要啟用繁體中文翻譯，先設定金鑰再啟動後端。模型預設是 `gpt-4o-mini`，可以用 `OPENAI_MODEL` 改：
+
+```bash
+export OPENAI_API_KEY=sk-...
+export OPENAI_MODEL=gpt-4o-mini
+```
+
+已經匯入的影片，下次打開片段時會補上還沒快取的翻譯，不會重翻已有的句子。
 
 前端：
 
@@ -65,7 +74,7 @@ python -m app.cli "https://www.youtube.com/watch?v=lC_-9TD3TfA"
 | `GET` | `/api/videos/{id}` | 影片與全部分段 |
 | `GET` | `/api/videos/{id}/segments` | 分段列表 |
 
-分段欄位包含 `text`、`start_time`、`end_time`（秒）。字幕優先使用手動英文（`en`、`en-US`、`en-GB` 等），沒有才改用自動產生的英文字幕。`caption_source` 會是 `manual` 或 `generated`。
+分段欄位包含 `text`、`translation_zh`、`start_time`、`end_time`（秒）。`translation_zh` 在沒有翻譯時是 `null`。回應裡的 `translation_enabled` 表示這台伺服器有沒有讀到 `OPENAI_API_KEY`。字幕優先使用手動英文（`en`、`en-US`、`en-GB` 等），沒有才改用自動產生的英文字幕。`caption_source` 會是 `manual` 或 `generated`。
 
 跟讀片段大約 1–3 句、5–15 秒，盡量在句號、問號、驚嘆號切開。單句超過 15 秒時，會再依逗號等子句或時間切開。
 
@@ -98,7 +107,7 @@ export YOUTUBE_PROXY_URL=http://user:pass@host:port
 
 - `/`：貼上 YouTube 網址、看已匯入的影片
 - `/videos/{id}`：該片的跟讀片段
-- `/videos/{id}/segments/{position}`：只播放該段。可重播、上一段／下一段，速度為 0.8、0.9、1.0。進入時不顯示字幕，側欄可改成英文，或英文＋中文。英文旁可複製。
+- `/videos/{id}/segments/{position}`：只播放該段。可重播、上一段／下一段，速度為 0.8、0.9、1.0。進入時不顯示字幕，側欄可改成英文，或英文＋中文。有快取翻譯時，中文顯示在英文下面；沒有金鑰或翻譯失敗時會看到說明。英文旁可複製。
 
 ## 測試
 
@@ -113,4 +122,4 @@ cd frontend
 npm test
 ```
 
-字幕抓取在單元測試裡使用假的 YouTube 回應，所以不需要網路，也不需要 `OPENAI_API_KEY`。
+字幕抓取與中文翻譯在單元測試裡使用假的 YouTube 與 OpenAI 回應，所以不需要網路，也不需要 `OPENAI_API_KEY`。

@@ -19,6 +19,7 @@ class SegmentOut(BaseModel):
     id: int
     position: int
     text: str
+    translation_zh: str | None = None
     start_time: float
     end_time: float
 
@@ -28,6 +29,7 @@ class SegmentOut(BaseModel):
             id=segment.id,
             position=segment.position,
             text=segment.text,
+            translation_zh=segment.translation_zh,
             start_time=segment.start_time,
             end_time=segment.end_time,
         )
@@ -42,9 +44,10 @@ class VideoOut(BaseModel):
     language_code: str
     created_at: datetime
     segment_count: int
+    translation_enabled: bool = False
 
     @classmethod
-    def from_video(cls, video: Video) -> VideoOut:
+    def from_video(cls, video: Video, *, translation_enabled: bool = False) -> VideoOut:
         return cls(
             id=video.id,
             youtube_id=video.youtube_id,
@@ -54,6 +57,7 @@ class VideoOut(BaseModel):
             language_code=video.language_code,
             created_at=video.created_at,
             segment_count=len(video.segments),
+            translation_enabled=translation_enabled,
         )
 
 
@@ -61,8 +65,8 @@ class VideoDetail(VideoOut):
     segments: list[SegmentOut]
 
     @classmethod
-    def from_video(cls, video: Video) -> VideoDetail:
-        base = VideoOut.from_video(video)
+    def from_video(cls, video: Video, *, translation_enabled: bool = False) -> VideoDetail:
+        base = VideoOut.from_video(video, translation_enabled=translation_enabled)
         return cls(
             **base.model_dump(),
             segments=[SegmentOut.from_segment(segment) for segment in video.segments],

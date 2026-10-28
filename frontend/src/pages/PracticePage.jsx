@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { YoutubeSegmentPlayer } from '../components/YoutubeSegmentPlayer.jsx';
 import { getVideo } from '../api.js';
+import { chineseLine } from '../lib/subtitles.js';
 import { formatRange } from '../lib/time.js';
 import { PLAYBACK_RATES } from '../lib/youtube.js';
 
@@ -84,7 +85,7 @@ export function PracticePage() {
 
   const previous = index > 0 ? segments[index - 1] : null;
   const next = index < segments.length - 1 ? segments[index + 1] : null;
-  const translation = segment.translation_zh;
+  const chinese = chineseLine(segment, video.translation_enabled);
 
   async function copyEnglish() {
     setCopyError('');
@@ -187,11 +188,11 @@ export function PracticePage() {
               </p>
             ) : null}
             {mode === 'both' ? (
-              translation ? (
-                <p className="subtitle-zh">{translation}</p>
+              chinese.kind === 'translation' ? (
+                <p className="subtitle-zh">{chinese.text}</p>
               ) : (
                 <p className="notice" role="status">
-                  目前沒有這段的中文翻譯。未設定 OPENAI_API_KEY 時，仍可只用英文練習。
+                  {chinese.text}
                 </p>
               )
             ) : null}

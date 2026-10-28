@@ -9,11 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.db import make_engine, make_session_factory
+from app.db import ensure_schema, make_engine, make_session_factory
 from app.errors import AppError
-from app.models import Base
 from app.routers import videos
 from app.services.titles import OEmbedTitleLookup
+from app.services.translate import build_translator
 from app.services.youtube import YoutubeTranscriptFetcher
 
 
@@ -21,7 +21,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     settings = get_settings(database_url)
     engine = make_engine(settings)
     session_factory = make_session_factory(engine)
-    Base.metadata.create_all(engine)
+    ensure_schema(engine)
 
     app = FastAPI(title="English Learning Platform API")
     app.add_middleware(
@@ -38,6 +38,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     app.state.session_factory = session_factory
     app.state.fetcher_factory = lambda: YoutubeTranscriptFetcher(proxy_url=settings.youtube_proxy_url)
     app.state.title_lookup_factory = OEmbedTitleLookup
+    app.state.translator_factory = lambda: build_translator(settings)
 
     @app.exception_handler(AppError)
     def handle_app_error(_request: Request, exc: AppError) -> JSONResponse:
