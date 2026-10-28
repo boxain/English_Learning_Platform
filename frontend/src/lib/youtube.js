@@ -36,6 +36,12 @@ export function loadYouTubeIframeApi() {
 }
 
 export const PLAYBACK_RATES = [0.8, 0.9, 1.0];
+export const PLAYBACK_RATE_STORAGE_KEY = 'elp-playback-rate';
+
+export function normalizePlaybackRate(value) {
+  const rate = Number(value);
+  return PLAYBACK_RATES.find((item) => Math.abs(item - rate) < 0.001) ?? 1;
+}
 
 export function applyPlaybackRate(player, rate) {
   if (!player || typeof player.setPlaybackRate !== 'function') return;

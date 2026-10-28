@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { getVideo } from '../api.js';
-import { formatRange } from '../lib/time.js';
+import { practiceText } from '../lib/text.js';
+import { formatDuration, formatRange } from '../lib/time.js';
 
 export function SegmentListPage() {
   const { id } = useParams();
@@ -58,8 +59,12 @@ export function SegmentListPage() {
             <Link className="segment-row" to={`/videos/${video.id}/segments/${segment.position}`}>
               <span className="segment-index">{segment.position + 1}</span>
               <span className="segment-copy">
-                <span className="segment-time">{formatRange(segment.start_time, segment.end_time)}</span>
-                <span className="segment-text">{segment.text}</span>
+                <span className="segment-time">
+                  {formatRange(segment.start_time, segment.end_time)}
+                  <span className="segment-duration">{formatDuration(segment.start_time, segment.end_time)}</span>
+                  {segment.translation_zh ? <span className="segment-zh">有中文</span> : null}
+                </span>
+                <span className="segment-text">{practiceText(segment.text)}</span>
               </span>
             </Link>
           </li>

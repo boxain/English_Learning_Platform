@@ -164,9 +164,14 @@ export const YoutubeSegmentPlayer = forwardRef(function YoutubeSegmentPlayer(
   }, [rate]);
 
   return (
-    <div className="player-frame">
+    <div className={error ? 'player-frame is-unavailable' : 'player-frame'}>
       <div ref={frameRef} className="player-host" />
-      {error ? <p className="player-error">{error}</p> : null}
+      {error ? (
+        <p className="player-error" role="status">
+          {error}
+          <span>仍可使用下方字幕跟讀。</span>
+        </p>
+      ) : null}
     </div>
   );
 });

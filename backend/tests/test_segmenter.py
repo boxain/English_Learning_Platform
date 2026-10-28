@@ -125,6 +125,7 @@ def test_skips_non_speech_cues_without_clipping_nearby_speech():
         [Cue("Hello [Music] world.", 0.0, 6.0)]
     )
     assert segment_transcript([Cue("[Music]", 0.0, 4.0), Cue("(Laughter)", 4.0, 2.0)]) == []
+    assert segment_transcript([Cue("♪ Hello there. ♪", 1.0, 6.0)])[0].text == "Hello there."
     assert segment_transcript([Cue("[♪♪♪]", 0.0, 3.0), Cue("Hello there.", 3.0, 6.0)])[0].text == "Hello there."
 
 

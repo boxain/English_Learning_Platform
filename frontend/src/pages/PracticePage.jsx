@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { YoutubeSegmentPlayer } from '../components/YoutubeSegmentPlayer.jsx';
 import { getVideo } from '../api.js';
 import { chineseLine } from '../lib/subtitles.js';
+import { practiceText } from '../lib/text.js';
 import { formatRange } from '../lib/time.js';
-import { PLAYBACK_RATES } from '../lib/youtube.js';
+import { PLAYBACK_RATE_STORAGE_KEY, PLAYBACK_RATES, normalizePlaybackRate } from '../lib/youtube.js';
+
+function readStoredRate() {
+  try {
+    return normalizePlaybackRate(sessionStorage.getItem(PLAYBACK_RATE_STORAGE_KEY));
+  } catch {
+    return 1;
+  }
+}
 
 const MODES = [
   { id: 'off', label: '無字幕' },
@@ -15,11 +24,15 @@ const MODES = [
 
 export function PracticePage() {
   const { id, position } = useParams();
+  const navigate = useNavigate();
   const playerRef = useRef(null);
+  const subtitleRef = useRef(null);
+  const navRef = useRef({ previousPath: '', nextPath: '' });
   const [video, setVideo] = useState(null);
   const [error, setError] = useState('');
   const [mode, setMode] = useState('off');
-  const [rate, setRate] = useState(1);
+  const [rate, setRate] = useState(readStoredRate);
+  navRef.current = { previousPath: '', nextPath: '' };
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState('');
 
@@ -46,10 +59,50 @@ export function PracticePage() {
   }, [id, position]);
 
   useEffect(() => {
+    if (mode === 'off') return;
+    subtitleRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [mode, position, id]);
+
+  useEffect(() => {
     if (!copied) return undefined;
     const timer = window.setTimeout(() => setCopied(false), 1200);
     return () => window.clearTimeout(timer);
   }, [copied]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(PLAYBACK_RATE_STORAGE_KEY, String(rate));
+    } catch {
+      // Session storage can be unavailable in private browsing.
+    }
+  }, [rate]);
+
+  useEffect(() => {
+    function onKeyDown(event) {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      const target = event.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        const typing = target instanceof HTMLInputElement
+          ? ['text', 'url', 'search', 'email'].includes(target.type)
+          : tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+        if (typing) return;
+      }
+      const { previousPath, nextPath } = navRef.current;
+      if (event.key === 'ArrowRight' && nextPath) {
+        event.preventDefault();
+        navigate(nextPath);
+      } else if (event.key === 'ArrowLeft' && previousPath) {
+        event.preventDefault();
+        navigate(previousPath);
+      } else if (event.key === 'r' || event.key === 'R') {
+        event.preventDefault();
+        playerRef.current?.replay();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [navigate]);
 
   if (error) {
     return (
@@ -85,12 +138,16 @@ export function PracticePage() {
 
   const previous = index > 0 ? segments[index - 1] : null;
   const next = index < segments.length - 1 ? segments[index + 1] : null;
+  const previousPath = previous ? `/videos/${video.id}/segments/${previous.position}` : '';
+  const nextPath = next ? `/videos/${video.id}/segments/${next.position}` : '';
+  navRef.current = { previousPath, nextPath };
   const chinese = chineseLine(segment, video.translation_enabled);
+  const english = practiceText(segment.text);
 
   async function copyEnglish() {
     setCopyError('');
     try {
-      await navigator.clipboard.writeText(segment.text);
+      await navigator.clipboard.writeText(english);
       setCopied(true);
       return;
     } catch {
@@ -98,7 +155,7 @@ export function PracticePage() {
     }
     try {
       const area = document.createElement('textarea');
-      area.value = segment.text;
+      area.value = english;
       area.setAttribute('readonly', '');
       area.style.position = 'fixed';
       area.style.left = '-9999px';
@@ -138,7 +195,7 @@ export function PracticePage() {
         <div className="transport">
           <div className="transport-nav">
             {previous ? (
-              <Link className="button button-secondary" to={`/videos/${video.id}/segments/${previous.position}`}>
+              <Link className="button button-secondary" to={previousPath}>
                 上一段
               </Link>
             ) : (
@@ -150,7 +207,7 @@ export function PracticePage() {
               重播
             </button>
             {next ? (
-              <Link className="button button-secondary" to={`/videos/${video.id}/segments/${next.position}`}>
+              <Link className="button button-secondary" to={nextPath}>
                 下一段
               </Link>
             ) : (
@@ -159,6 +216,8 @@ export function PracticePage() {
               </button>
             )}
           </div>
+          <div className="speed-control">
+            <span className="speed-label">速度</span>
           <div className="speed-group" role="group" aria-label="播放速度">
             {PLAYBACK_RATES.map((value) => (
               <button
@@ -172,12 +231,13 @@ export function PracticePage() {
               </button>
             ))}
           </div>
+          </div>
         </div>
 
         {mode !== 'off' ? (
-          <div className="subtitle-panel">
+          <div className="subtitle-panel" ref={subtitleRef}>
             <div className="subtitle-en-row">
-              <p className="subtitle-en">{segment.text}</p>
+              <p className="subtitle-en">{english}</p>
               <button type="button" className="copy-button" onClick={copyEnglish}>
                 {copied ? '已複製' : '複製'}
               </button>
@@ -216,7 +276,7 @@ export function PracticePage() {
             </label>
           ))}
         </fieldset>
-        <p className="sidebar-note">進入片段時不顯示字幕，可在這裡打開。</p>
+        <p className="sidebar-note">方向鍵換段，R 重播。</p>
       </aside>
     </div>
   );

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { formatRange, formatTimestamp } from './time.js';
+import { formatDuration, formatRange, formatTimestamp } from './time.js';
 
 test('formats timestamps with one decimal', () => {
   assert.equal(formatTimestamp(0), '0:00.0');
@@ -14,4 +14,8 @@ test('formats timestamps with one decimal', () => {
 
 test('formats a practice range', () => {
   assert.equal(formatRange(8.5, 16), '0:08.5–0:16.0');
+});
+
+test('formats a segment duration', () => {
+  assert.equal(formatDuration(18.64, 33.27), '14.6 秒');
 });

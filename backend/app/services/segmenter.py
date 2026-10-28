@@ -28,6 +28,7 @@ _SOUND_PARENS = re.compile(
 )
 _TAGS = re.compile(r"<[^>]+>")
 _WHITESPACE = re.compile(r"\s+")
+_MUSIC_NOTES = re.compile(r"[♪♫♬♩]+")
 
 _ABBREVIATIONS = {
     "mr.",
@@ -120,6 +121,7 @@ def _clean_text(text: str) -> str:
     cleaned = _TAGS.sub(" ", cleaned)
     cleaned = _SOUND_BRACKETS.sub(" ", cleaned)
     cleaned = _SOUND_PARENS.sub(" ", cleaned)
+    cleaned = _MUSIC_NOTES.sub(" ", cleaned)
     cleaned = _WHITESPACE.sub(" ", cleaned).strip()
     if not re.search(r"[A-Za-z0-9]", cleaned):
         return ""

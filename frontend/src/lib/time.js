@@ -11,3 +11,8 @@ export function formatTimestamp(value) {
 export function formatRange(start, end) {
   return `${formatTimestamp(start)}–${formatTimestamp(end)}`;
 }
+
+export function formatDuration(start, end) {
+  const seconds = Number.isFinite(end - start) ? Math.max(0, end - start) : 0;
+  return `${(Math.round(seconds * 10) / 10).toFixed(1)} 秒`;
+}
